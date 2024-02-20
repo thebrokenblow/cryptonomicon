@@ -2,7 +2,7 @@
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
     <div class="container">
       <div class="w-full my-4"></div>
-      <add-ticker @add-ticker="add" :disabled="tooManyTickersAdded" />
+      <add-ticker @add-ticker="add" :tickers="tickers" :disabled="tooManyTickersAdded" />
       <template v-if="tickers.length">
         <hr class="w-full border-t border-gray-600 my-4" />
         <div>
@@ -133,14 +133,12 @@ export default {
   data() {
     return {
       filter: '',
-
-      tickers: [],
-      selectedTicker: null,
-
       graph: [],
+      tickers: [],
+      page: 1,
       maxGraphElements: 1,
-
-      page: 1
+      isTickerEntered: false,
+      selectedTicker: null
     }
   },
 
@@ -154,14 +152,6 @@ export default {
         this[key] = windowData[key]
       }
     })
-
-    // if (windowData.filter) {
-    //   this.filter = windowData.filter;
-    // }
-
-    // if (windowData.page) {
-    //   this.page = windowData.page;
-    // }
 
     const tickersData = localStorage.getItem('cryptonomicon-list')
 
@@ -258,6 +248,14 @@ export default {
     },
 
     add(ticker) {
+      const nameMatch = this.tickers.filter(
+        (currentTicker) => currentTicker.name.toLowerCase() === ticker.toLowerCase()
+      )
+      this.isTickerEntered = nameMatch.length != 0
+      if (this.isTickerEntered) {
+        return
+      }
+
       const currentTicker = {
         name: ticker,
         price: '-'
@@ -291,8 +289,6 @@ export default {
     },
 
     tickers(newValue, oldValue) {
-      // Почему не сработал watch при добавлении?
-      console.log(newValue === oldValue)
       localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
     },
 
