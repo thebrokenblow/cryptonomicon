@@ -2,7 +2,7 @@
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
     <div class="container">
       <div class="w-full my-4"></div>
-      <add-ticker @add-ticker="add" :tickers="tickers" :disabled="tooManyTickersAdded" />
+      <add-ticker @add-ticker="add" :tickers="tickers" />
       <template v-if="tickers.length">
         <hr class="w-full border-t border-gray-600 my-4" />
         <div>
@@ -103,24 +103,7 @@
 </template>
 
 <script>
-// H - homework - домашнее задание
-
-// [x] 6. Наличие в состоянии ЗАВИСИМЫХ ДАННЫХ | Критичность: 5+
-// [x] 4. Запросы напрямую внутри компонента (???) | Критичность: 5
-// [x] 2. При удалении остается подписка на загрузку тикера | Критичность: 5
-// [H] 5. Обработка ошибок API | Критичность: 5
-// [х] 3. Количество запросов | Критичность: 4
-// [x] 8. При удалении тикера не изменяется localStorage | Критичность: 4
-// [x] 1. Одинаковый код в watch | Критичность: 3
-// [ ] 9. localStorage и анонимные вкладки | Критичность: 3
-// [x] 7. График ужасно выглядит если будет много цен | Критичность: 2
-// [ ] 10. Магические строки и числа (URL, 5000 миллисекунд задержки, ключ локал стораджа, количество на странице) |  Критичность: 1
-
-// Параллельно
-// [x] График сломан если везде одинаковые значения
-// [x] При удалении тикера остается выбор
-
-import { subscribeToTicker, unsubscribeFromTicker } from './api'
+import { subscribeToTicker, unsubscribeFromTicker, getAllTickers } from './api'
 import AddTicker from './components/AddTicker.vue'
 
 export default {
@@ -162,7 +145,7 @@ export default {
       })
     }
 
-    setInterval(this.updateTickers, 5000)
+    getAllTickers()
   },
 
   mounted() {
@@ -174,10 +157,6 @@ export default {
   },
 
   computed: {
-    tooManyTickersAdded() {
-      return this.tickers.length > 4
-    },
-
     startIndex() {
       return (this.page - 1) * 6
     },

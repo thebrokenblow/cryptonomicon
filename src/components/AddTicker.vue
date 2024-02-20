@@ -6,56 +6,56 @@
         <div class="mt-1 relative rounded-md shadow-md">
           <input
             v-model="ticker"
+            @input="isTickerContained = false"
             @keydown.enter="add"
             type="text"
             name="wallet"
             id="wallet"
-            inpu
             class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
             placeholder="Например DOGE"
           />
         </div>
         <div class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap">
           <span
+            v-for="autoCompletionTicker in autoCompletionTickers"
+            :key="autoCompletionTicker.id"
+            @click="addByAutoCompletion(autoCompletionTicker.symbol)"
             class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
           >
-            BTC
-          </span>
-          <span
-            class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-          >
-            DOGE
-          </span>
-          <span
-            class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-          >
-            BCH
-          </span>
-          <span
-            class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-          >
-            CHD
+            {{ autoCompletionTicker.symbol }}
           </span>
         </div>
-        <div v-if="isTickerEntered" class="text-sm text-red-600">Такой тикер уже добавлен</div>
+        <div v-if="isTickerContained" class="text-sm text-red-600">Такой тикер уже добавлен</div>
       </div>
     </div>
-    <add-button @click="add" type="button" :disabled="disabled" class="my-4" />
+    <add-button @click="add" type="button" class="my-4" />
   </section>
 </template>
 <script>
 import AddButton from './AddButton.vue'
+import { getAllTickers } from '../api.js'
 
 export default {
   components: {
     AddButton
   },
 
-  props: {
-    disabled: {
-      type: Boolean,
-      required: true,
-      default: false
+  computed: {
+    autoCompletionTickers() {
+      return this.allTicker
+        .filter((currentTicker) => {
+          if (this.ticker == '') {
+            return false
+          }
+
+          let nameTicker = this.ticker.toLocaleLowerCase()
+
+          return (
+            currentTicker.symbol.toLocaleLowerCase().includes(nameTicker) ||
+            currentTicker.fullName.toLocaleLowerCase().includes(nameTicker)
+          )
+        })
+        .slice(0, 4)
     }
   },
 
@@ -67,36 +67,47 @@ export default {
     }
   },
 
-  watch: {
-    ticker() {
-      this.isTickerEntered = false
-    }
-  },
-
   emits: {
     'add-ticker': (value) => typeof value === 'string' && value.length > 0
+  },
+
+  async created() {
+    const tickerJson = await getAllTickers()
+    for (let item in tickerJson.Data) {
+      let symbol = tickerJson.Data[item]
+      this.allTicker.push({
+        symbol: symbol.Symbol,
+        fullName: symbol.FullName
+      })
+    }
   },
 
   data() {
     return {
       ticker: '',
-      isTickerEntered: false
+      isTickerContained: false,
+      allTicker: []
     }
   },
 
   methods: {
-    add() {
-      if (this.ticker.length === 0) {
-        return
-      }
-
-      const nameMatch = this.tickers.filter(
-        (currentTicker) => currentTicker.name.toLowerCase() === this.ticker.toLowerCase()
+    getMatchesByName() {
+      const namesTickersMatch = this.tickers.filter(
+        (currentTicker) =>
+          currentTicker.name.toLocaleLowerCase() === this.ticker.toLocaleLowerCase()
       )
 
-      this.isTickerEntered = nameMatch.length != 0
+      return namesTickersMatch.length != 0
+    },
 
-      if (this.isTickerEntered) {
+    addByAutoCompletion(nameTicker) {
+      this.ticker = nameTicker
+      this.add()
+    },
+
+    add() {
+      this.isTickerContained = this.getMatchesByName()
+      if (this.ticker.length === 0 || this.isTickerContained) {
         return
       }
 

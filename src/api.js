@@ -1,4 +1,6 @@
-const API_KEY = '380ec498044c900f249ad39326e8320a2cb4ee09b94afe4dff6911e37ef56bfc'
+import axios from 'axios'
+
+const API_KEY = '0afe0210a760fda9bd83b4cbfae971fe47715ca7b7218771af22be0f9465e2ac'
 
 const tickersHandlers = new Map()
 const socket = new WebSocket(`wss://streamer.cryptocompare.com/v2?api_key=${API_KEY}`)
@@ -55,4 +57,15 @@ export const subscribeToTicker = (ticker, cb) => {
 export const unsubscribeFromTicker = (ticker) => {
   tickersHandlers.delete(ticker)
   unsubscribeFromTickerOnWs(ticker)
+}
+
+export async function getAllTickers() {
+  let result = null
+
+  await axios
+    .get('https://min-api.cryptocompare.com/data/all/coinlist?summary=true')
+    .then((response) => (result = response.data))
+    .catch((error) => console.log(error.toJSON()))
+
+  return result
 }
