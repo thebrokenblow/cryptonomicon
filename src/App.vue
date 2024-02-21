@@ -62,7 +62,11 @@
         </dl>
         <hr class="w-full border-t border-gray-600 my-4" />
       </template>
-      <graph-ticker :selectedTicker="selectedTicker" :price="priceSelectTicker" @remove-select-ticker="selectedTicker = null"/>
+      <graph-ticker
+        :selectedTicker="selectedTicker"
+        :price="priceSelectTicker"
+        @remove-select-ticker="selectedTicker = null"
+      />
     </div>
   </div>
 </template>
@@ -82,12 +86,16 @@ export default {
 
   data() {
     return {
-      filter: '',
       tickers: [],
-      page: 1,
-      isTickerEntered: false,
       selectedTicker: null,
-      priceSelectTicker: 0
+      filter: '',
+      isTickerEntered: false,
+      page: 1,
+      priceSelectTicker: 0,
+      countTickersOnPage: 6,
+      priceToFixed: 2,
+      priceToPrecision: 2,
+      nameLocalStorage: 'cryptonomicon-list'
     }
   },
 
@@ -102,7 +110,8 @@ export default {
       }
     })
 
-    const tickersData = localStorage.getItem('cryptonomicon-list')
+    const tickersData = localStorage.getItem(this.nameLocalStorage)
+
     if (tickersData) {
       this.tickers = JSON.parse(tickersData)
       this.tickers.forEach((ticker) => {
@@ -115,11 +124,11 @@ export default {
 
   computed: {
     startIndex() {
-      return (this.page - 1) * 6
+      return (this.page - 1) * this.countTickersOnPage
     },
 
     endIndex() {
-      return this.page * 6
+      return this.page * this.countTickersOnPage
     },
 
     filteredTickers() {
@@ -147,7 +156,7 @@ export default {
       if (price === '-') {
         return price
       }
-      return price > 1 ? price.toFixed(2) : price.toPrecision(2)
+      return price > 1 ? price.toFixed(this.priceToFixed) : price.toPrecision(this.priceToPrecision)
     },
 
     updateTicker(tickerName, price) {
@@ -190,7 +199,7 @@ export default {
 
   watch: {
     tickers() {
-      localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
+      localStorage.setItem(this.nameLocalStorage, JSON.stringify(this.tickers))
     },
 
     paginatedTickers() {
