@@ -38,13 +38,29 @@
 </template>
 
 <script>
+const CONSTANTS = {
+  minHeightBar: 5,
+  oneHundredPercent: 100,
+  defaultPercent: 50,
+  defaultWidth: 38
+}
+
 export default {
+  created() {
+    this.$options.minHeightBar = CONSTANTS.minHeightBar
+    this.$options.oneHundredPercent = CONSTANTS.oneHundredPercent
+    this.$options.defaultPercent = CONSTANTS.defaultPercent
+    this.$options.defaultWidth = CONSTANTS.defaultWidth
+  },
+
   data() {
     return {
       maxGraphElements: 1,
-      graph: []
+      graph: [],
+      CONSTANTS
     }
   },
+
   props: {
     selectedTicker: {
       type: Object,
@@ -69,9 +85,10 @@ export default {
   methods: {
     calculateMaxGraphElements() {
       if (this.$refs.graph) {
-        this.maxGraphElements = Math.ceil(this.$refs.graph.clientWidth / 38)
+        this.maxGraphElements = Math.ceil(this.$refs.graph.clientWidth / this.$options.defaultWidth)
       }
     },
+
     removeSelectTicker() {
       this.$emit('remove-select-ticker')
     }
@@ -82,11 +99,20 @@ export default {
       const maxValue = Math.max(...this.graph)
       const minValue = Math.min(...this.graph)
 
+      const defaultPercent = this.$options.defaultPercent
+
       if (maxValue === minValue) {
-        return this.graph.map(() => 50)
+        return this.graph.map(() => defaultPercent)
       }
 
-      return this.graph.map((price) => 5 + ((price - minValue) * 95) / (maxValue - minValue))
+      const minHeightBar = this.$options.minHeightBar
+      const oneHundredPercent = this.$options.oneHundredPercent
+
+      return this.graph.map(
+        (price) =>
+          minHeightBar +
+          ((price - minValue) * (oneHundredPercent - minHeightBar)) / (maxValue - minValue)
+      )
     }
   },
 
