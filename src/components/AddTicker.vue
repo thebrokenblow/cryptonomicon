@@ -63,12 +63,13 @@ export default {
     tickers: {
       type: Array,
       required: true,
-      default: []
+      default: null
     }
   },
 
   emits: {
-    'add-ticker': (value) => typeof value === 'string' && value.length > 0
+    'add-ticker': (value) => typeof value === 'string' && value.length > 0,
+    'hide-spinner': null
   },
 
   async created() {
@@ -79,6 +80,10 @@ export default {
         symbol: symbol.Symbol,
         fullName: symbol.FullName
       })
+    }
+
+    if (this.allTicker.length > 0) {
+      this.$emit('hide-spinner')
     }
   },
 
