@@ -48,11 +48,10 @@ export default {
             return false
           }
 
-          let nameTicker = this.ticker.toLocaleLowerCase()
+          let nameTicker = this.ticker.toUpperCase()
 
           return (
-            currentTicker.symbol.toLocaleLowerCase().includes(nameTicker) ||
-            currentTicker.fullName.toLocaleLowerCase().includes(nameTicker)
+            currentTicker.symbol.includes(nameTicker) || currentTicker.fullName.includes(nameTicker)
           )
         })
         .slice(0, 4)
@@ -98,11 +97,20 @@ export default {
   methods: {
     getMatchesByName() {
       const namesTickersMatch = this.tickers.filter(
-        (currentTicker) =>
-          currentTicker.name.toLocaleLowerCase() === this.ticker.toLocaleLowerCase()
+        (currentTicker) => currentTicker.name === this.ticker
       )
 
       return namesTickersMatch.length != 0
+    },
+
+    isContainedTicker() {
+      for (const key in this.allTicker) {
+        if (this.allTicker[key].symbol == this.ticker.toUpperCase()) {
+          return true
+        }
+      }
+
+      return false
     },
 
     addByAutoCompletion(nameTicker) {
@@ -116,8 +124,7 @@ export default {
         return
       }
 
-      this.$emit('add-ticker', this.ticker)
-
+      this.$emit('add-ticker', this.ticker.toUpperCase(), this.isContainedTicker())
       this.ticker = ''
     }
   }

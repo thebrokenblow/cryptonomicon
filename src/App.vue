@@ -51,23 +51,25 @@
         <hr class="w-full border-t border-gray-600 my-4" />
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
-            v-for="t in paginatedTickers"
-            :key="t.name"
-            @click="select(t)"
+            v-for="ticker in paginatedTickers"
+            :key="ticker.name"
+            @click="select(ticker)"
             :class="{
-              'border-4': selectedTicker === t
+              'border-4': selectedTicker === ticker,
+              'bg-red-100': !ticker.isExistingTicker,
+              'bg-white': ticker.isExistingTicker
             }"
-            class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
+            class="overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
-              <dt class="text-sm font-medium text-gray-500 truncate">{{ t.name }} - USD</dt>
+              <dt class="text-sm font-medium text-gray-500 truncate">{{ ticker.name }} - USD</dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                {{ formatPrice(t.price) }}
+                {{ formatPrice(ticker.price) }}
               </dd>
             </div>
             <div class="w-full border-t border-gray-200"></div>
             <button
-              @click.stop="handleDelete(t)"
+              @click.stop="handleDelete(ticker)"
               class="flex items-center justify-center font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-gray-600 hover:bg-gray-200 hover:opacity-20 transition-all focus:outline-none"
             >
               <svg
@@ -159,7 +161,9 @@ export default {
     },
 
     filteredTickers() {
-      return this.tickers.filter((ticker) => ticker.name.includes(this.filter))
+      return this.tickers.filter((ticker) =>
+        ticker.name.toLowerCase().includes(this.filter.toLowerCase())
+      )
     },
 
     paginatedTickers() {
@@ -201,10 +205,11 @@ export default {
         })
     },
 
-    add(ticker) {
+    add(ticker, isExistingTicker) {
       const currentTicker = {
         name: ticker,
-        price: '-'
+        price: '-',
+        isExistingTicker: isExistingTicker
       }
 
       this.tickers = [...this.tickers, currentTicker]
