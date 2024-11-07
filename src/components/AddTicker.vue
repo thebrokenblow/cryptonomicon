@@ -104,8 +104,8 @@ export default {
     },
 
     isContainedTicker() {
-      for (const key in this.allTicker) {
-        if (this.allTicker[key].symbol == this.ticker.toUpperCase()) {
+      for (const ticker of this.allTicker) {
+        if (ticker.symbol == this.ticker.toUpperCase()) {
           return true
         }
       }

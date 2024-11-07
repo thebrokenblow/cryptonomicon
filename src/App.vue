@@ -215,9 +215,11 @@ export default {
       this.tickers = [...this.tickers, currentTicker]
       this.filter = ''
 
-      subscribeToTicker(currentTicker.name, (newPrice) =>
-        this.updateTicker(currentTicker.name, newPrice)
-      )
+      if (isExistingTicker) {
+        subscribeToTicker(currentTicker.name, (newPrice) =>
+          this.updateTicker(currentTicker.name, newPrice)
+        )
+      }
     },
 
     select(ticker) {
