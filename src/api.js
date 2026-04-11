@@ -1,6 +1,6 @@
 const API_KEY = '380ec498044c900f249ad39326e8320a2cb4ee09b94afe4dff6911e37ef56bfc';
 
-const tickersHandlers = new Map(); // {}
+const tickersHandlers = new Map();
 const socket = new WebSocket(`wss://streamer.cryptocompare.com/v2?api_key=${API_KEY}`);
 
 const AGGREGATE_INDEX = '5';
