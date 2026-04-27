@@ -1,8 +1,13 @@
 <template>
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
-    <div class="container">
+    <app-loader v-if="isLoadingTickersSuggestions" />
+    <div v-else class="container">
       <div class="w-full my-4"></div>
-      <add-ticker @add-ticker="add" :disabled="tooManyTickersAdded" />
+      <add-ticker
+        @add-ticker="add"
+        :addedTickers="tickers"
+        :availableTickers="tickersSuggestions"
+      />
       <template v-if="tickers.length">
         <hr class="w-full border-t border-gray-600 my-4" />
         <div>
@@ -120,14 +125,17 @@
 // [x] График сломан если везде одинаковые значения
 // [x] При удалении тикера остается выбор
 
-import { subscribeToTicker, unsubscribeFromTicker } from './api';
+import { subscribeToTicker, unsubscribeFromTicker } from './services/tickersSubscriberApi';
+import { getTickersSuggestions } from './services/tickersSuggestionsApi.js';
 import AddTicker from './components/AddTicker.vue';
+import AppLoader from './components/AppLoader.vue';
 
 export default {
   name: 'App',
 
   components: {
-    AddTicker
+    AddTicker,
+    AppLoader
   },
 
   data() {
@@ -135,6 +143,9 @@ export default {
       filter: '',
 
       tickers: [],
+      tickersSuggestions: [],
+      isLoadingTickersSuggestions: false,
+
       selectedTicker: null,
 
       graph: [],
@@ -155,14 +166,6 @@ export default {
       }
     });
 
-    // if (windowData.filter) {
-    //   this.filter = windowData.filter;
-    // }
-
-    // if (windowData.page) {
-    //   this.page = windowData.page;
-    // }
-
     const tickersData = localStorage.getItem('cryptonomicon-list');
 
     if (tickersData) {
@@ -171,11 +174,13 @@ export default {
         subscribeToTicker(ticker.name, (newPrice) => this.updateTicker(ticker.name, newPrice));
       });
     }
-
-    setInterval(this.updateTickers, 5000);
   },
 
-  mounted() {
+  async mounted() {
+    this.isLoadingTickersSuggestions = true;
+    this.tickersSuggestions = await getTickersSuggestions();
+    this.isLoadingTickersSuggestions = false;
+
     window.addEventListener('resize', this.calculateMaxGraphElements);
   },
 
@@ -184,10 +189,6 @@ export default {
   },
 
   computed: {
-    tooManyTickersAdded() {
-      return this.tickers.length > 4;
-    },
-
     startIndex() {
       return (this.page - 1) * 6;
     },
@@ -257,7 +258,7 @@ export default {
       return price > 1 ? price.toFixed(2) : price.toPrecision(2);
     },
 
-    add(ticker) {
+    async add(ticker) {
       const currentTicker = {
         name: ticker,
         price: '-'
@@ -290,9 +291,7 @@ export default {
       this.$nextTick().then(this.calculateMaxGraphElements);
     },
 
-    tickers(newValue, oldValue) {
-      // Почему не сработал watch при добавлении?
-      console.log(newValue === oldValue);
+    tickers() {
       localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers));
     },
 
