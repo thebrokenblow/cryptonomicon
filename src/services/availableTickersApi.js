@@ -1,4 +1,4 @@
-export const getTickersSuggestions = async () => {
+export const getAvailableTickers = async () => {
   const response = await fetch('https://min-api.cryptocompare.com/data/all/coinlist');
   const apiResponse = await response.json();
 

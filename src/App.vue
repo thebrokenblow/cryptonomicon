@@ -1,52 +1,48 @@
 <template>
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
-    <app-loader v-if="isLoadingTickersSuggestions" />
+    <app-loader v-if="isLoadingAvailableTickers" />
     <div v-else class="container">
       <div class="w-full my-4"></div>
-      <add-ticker
-        @add-ticker="add"
-        :addedTickers="tickers"
-        :availableTickers="tickersSuggestions"
-      />
-      <template v-if="tickers.length">
+      <add-ticker @add-ticker="add" :addedTickers="tickers" :availableTickers="availableTickers" />
+      <template v-if="tickers.length > 0">
         <hr class="w-full border-t border-gray-600 my-4" />
         <div>
           <button
             class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
             v-if="page > 1"
-            @click="page = page - 1"
+            @click="setPreviousPage"
           >
             Назад
           </button>
           <button
             class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-            @click="page = page + 1"
+            @click="setNextPage"
             v-if="hasNextPage"
           >
             Вперед
           </button>
           <div>Фильтр: <input v-model="filter" /></div>
         </div>
-        <hr class="w-full border-t border-gray-600 my-4" />
+        <hr v-if="paginatedTickers.length > 0" class="w-full border-t border-gray-600 my-4" />
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div
-            v-for="t in paginatedTickers"
-            :key="t.name"
-            @click="select(t)"
+            v-for="ticker in paginatedTickers"
+            :key="ticker.name"
+            @click="select(ticker)"
             :class="{
-              'border-4': selectedTicker === t
+              'border-4': selectedTicker === ticker
             }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
-              <dt class="text-sm font-medium text-gray-500 truncate">{{ t.name }} - USD</dt>
+              <dt class="text-sm font-medium text-gray-500 truncate">{{ ticker.name }} - USD</dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                {{ formatPrice(t.price) }}
+                {{ formatPrice(ticker.price) }}
               </dd>
             </div>
             <div class="w-full border-t border-gray-200"></div>
             <button
-              @click.stop="handleDelete(t)"
+              @click.stop="handleDelete(ticker)"
               class="flex items-center justify-center font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-gray-600 hover:bg-gray-200 hover:opacity-20 transition-all focus:outline-none"
             >
               <svg
@@ -65,7 +61,7 @@
             </button>
           </div>
         </dl>
-        <hr class="w-full border-t border-gray-600 my-4" />
+        <hr v-if="paginatedTickers.length > 0" class="w-full border-t border-gray-600 my-4" />
       </template>
       <section v-if="selectedTicker" class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
@@ -106,27 +102,9 @@
     </div>
   </div>
 </template>
-
 <script>
-// H - homework - домашнее задание
-
-// [x] 6. Наличие в состоянии ЗАВИСИМЫХ ДАННЫХ | Критичность: 5+
-// [x] 4. Запросы напрямую внутри компонента (???) | Критичность: 5
-// [x] 2. При удалении остается подписка на загрузку тикера | Критичность: 5
-// [H] 5. Обработка ошибок API | Критичность: 5
-// [х] 3. Количество запросов | Критичность: 4
-// [x] 8. При удалении тикера не изменяется localStorage | Критичность: 4
-// [x] 1. Одинаковый код в watch | Критичность: 3
-// [ ] 9. localStorage и анонимные вкладки | Критичность: 3
-// [x] 7. График ужасно выглядит если будет много цен | Критичность: 2
-// [ ] 10. Магические строки и числа (URL, 5000 миллисекунд задержки, ключ локал стораджа, количество на странице) |  Критичность: 1
-
-// Параллельно
-// [x] График сломан если везде одинаковые значения
-// [x] При удалении тикера остается выбор
-
-import { subscribeToTicker, unsubscribeFromTicker } from './services/tickersSubscriberApi';
-import { getTickersSuggestions } from './services/tickersSuggestionsApi.js';
+import { subscribeToTicker, unsubscribeFromTicker } from './services/subscriberTickersApi';
+import { getAvailableTickers } from './services/availableTickersApi.js';
 import AddTicker from './components/AddTicker.vue';
 import AppLoader from './components/AppLoader.vue';
 
@@ -141,17 +119,26 @@ export default {
   data() {
     return {
       filter: '',
+      missingPriceIndicator: '-',
 
       tickers: [],
-      tickersSuggestions: [],
-      isLoadingTickersSuggestions: false,
+      availableTickers: [],
+      isLoadingAvailableTickers: false,
+
+      priceThreshold: 1,
+      decimalPlaces: 2,
+      significantDigits: 2,
+
+      minPercentageGraphLine: 5,
+      maxPercentageGraphLine: 100,
 
       selectedTicker: null,
 
       graph: [],
       maxGraphElements: 1,
 
-      page: 1
+      page: 1,
+      maxTickersPerPage: 9
     };
   },
 
@@ -177,9 +164,9 @@ export default {
   },
 
   async mounted() {
-    this.isLoadingTickersSuggestions = true;
-    this.tickersSuggestions = await getTickersSuggestions();
-    this.isLoadingTickersSuggestions = false;
+    this.isLoadingAvailableTickers = true;
+    this.availableTickers = await getAvailableTickers();
+    this.isLoadingAvailableTickers = false;
 
     window.addEventListener('resize', this.calculateMaxGraphElements);
   },
@@ -190,15 +177,17 @@ export default {
 
   computed: {
     startIndex() {
-      return (this.page - 1) * 6;
+      return (this.page - 1) * this.maxTickersPerPage;
     },
 
     endIndex() {
-      return this.page * 6;
+      return this.page * this.maxTickersPerPage;
     },
 
     filteredTickers() {
-      return this.tickers.filter((ticker) => ticker.name.includes(this.filter));
+      return this.tickers.filter((ticker) =>
+        ticker.name.toLowerCase().includes(this.filter.toLowerCase())
+      );
     },
 
     paginatedTickers() {
@@ -214,10 +203,15 @@ export default {
       const minValue = Math.min(...this.graph);
 
       if (maxValue === minValue) {
-        return this.graph.map(() => 50);
+        return this.graph.map(() => this.maxPercentageGraphLine / 2);
       }
 
-      return this.graph.map((price) => 5 + ((price - minValue) * 95) / (maxValue - minValue));
+      return this.graph.map(
+        (price) =>
+          this.minPercentageGraphLine +
+          ((price - minValue) * this.maxPercentageGraphLine - this.minPercentageGraphLine) /
+            (maxValue - minValue)
+      );
     },
 
     pageStateOptions() {
@@ -229,6 +223,14 @@ export default {
   },
 
   methods: {
+    setPreviousPage() {
+      this.page -= 1;
+    },
+
+    setNextPage() {
+      this.page += 1;
+    },
+
     calculateMaxGraphElements() {
       if (!this.$refs.graph) {
         return;
@@ -239,29 +241,34 @@ export default {
 
     updateTicker(tickerName, price) {
       this.tickers
-        .filter((t) => t.name === tickerName)
-        .forEach((t) => {
-          if (t === this.selectedTicker) {
+        .filter((ticker) => ticker.name === tickerName)
+        .forEach((ticker) => {
+          if (ticker === this.selectedTicker) {
             this.graph.push(price);
             while (this.graph.length > this.maxGraphElements) {
               this.graph.shift();
             }
           }
-          t.price = price;
+          ticker.price = price;
         });
     },
 
     formatPrice(price) {
-      if (price === '-') {
-        return price;
+      if (price === null) {
+        return this.missingPriceIndicator;
       }
-      return price > 1 ? price.toFixed(2) : price.toPrecision(2);
+
+      if (price > this.priceThreshold) {
+        return price.toFixed(this.decimalPlaces);
+      }
+
+      return price.toPrecision(this.significantDigits);
     },
 
     async add(ticker) {
       const currentTicker = {
         name: ticker,
-        price: '-'
+        price: null
       };
 
       this.tickers = [...this.tickers, currentTicker];
@@ -276,7 +283,7 @@ export default {
     },
 
     handleDelete(tickerToRemove) {
-      this.tickers = this.tickers.filter((t) => t !== tickerToRemove);
+      this.tickers = this.tickers.filter((ticker) => ticker !== tickerToRemove);
       if (this.selectedTicker === tickerToRemove) {
         this.selectedTicker = null;
       }
@@ -287,7 +294,6 @@ export default {
   watch: {
     selectedTicker() {
       this.graph = [];
-
       this.$nextTick().then(this.calculateMaxGraphElements);
     },
 
