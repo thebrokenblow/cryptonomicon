@@ -73,7 +73,8 @@
             :key="idx"
             :style="{ height: `${bar}%` }"
             ref="graphElements"
-            class="bg-purple-800 border w-10"
+            class="bg-purple-800 border"
+            :class="`${widthClassPrefix}-10`"
           ></div>
         </div>
         <button @click="selectedTicker = null" type="button" class="absolute top-0 right-0">
@@ -121,6 +122,7 @@ export default {
     return {
       filter: '',
       missingPriceIndicator: '-',
+      widthClassPrefix: 'w',
 
       tickers: [],
       availableTickers: [],
@@ -137,6 +139,7 @@ export default {
       selectedTicker: null,
 
       graph: [],
+      defaultGraphValue: -1,
       maxGraphElements: 1,
 
       page: 1,
@@ -201,19 +204,30 @@ export default {
     },
 
     normalizedGraph() {
-      const maxValue = Math.max(...this.graph);
-      const minValue = Math.min(...this.graph);
+      const realPrices = this.graph.filter(
+        (graphElement) => graphElement !== this.defaultGraphValue
+      );
 
-      if (maxValue === minValue) {
-        return this.graph.map(() => this.maxPercentageGraphLine / 2);
+      if (realPrices.length === 0) {
+        return this.graph.map(() => this.maxPercentageGraphLine);
       }
 
-      return this.graph.map(
-        (price) =>
+      const minRealPrice = Math.min(...realPrices);
+      const maxRealPrice = Math.max(...realPrices);
+
+      if (minRealPrice === maxRealPrice) {
+        return realPrices.map(() => this.maxPercentageGraphLine);
+      }
+
+      return realPrices.map((price) => {
+        const priceFraction = (price - minRealPrice) / (maxRealPrice - minRealPrice);
+
+        const height =
           this.minPercentageGraphLine +
-          ((price - minValue) * this.maxPercentageGraphLine - this.minPercentageGraphLine) /
-            (maxValue - minValue)
-      );
+          priceFraction * (this.maxPercentageGraphLine - this.minPercentageGraphLine);
+
+        return height;
+      });
     },
 
     pageStateOptions() {
@@ -241,7 +255,10 @@ export default {
       this.trimGraphToMaxSize();
 
       const firstGraphElement = this.$refs.graphElements[0];
-      const widthValue = this.extractNumberFromClass(firstGraphElement.classList, 'w-', '-');
+      const widthValue = this.extractNumberFromClass(
+        firstGraphElement.classList,
+        this.widthClassPrefix
+      );
       this.maxGraphElements = this.$refs.graph.clientWidth / (widthValue * this.baseWidthUnit);
     },
 
@@ -251,14 +268,14 @@ export default {
       }
     },
 
-    extractNumberFromClass(classList, classPrefix, delimiter) {
+    extractNumberFromClass(classList, classPrefix) {
       if (!classList?.length) {
         return null;
       }
 
       for (const className of classList) {
         if (className.startsWith(classPrefix)) {
-          const parts = className.split(delimiter);
+          const parts = className.split('-');
           if (parts.length > 1) {
             return parts[1];
           }
@@ -321,7 +338,7 @@ export default {
 
   watch: {
     selectedTicker() {
-      this.graph = [this.maxGraphElements];
+      this.graph = [this.defaultGraphValue];
       this.$nextTick().then(this.calculateMaxGraphElements);
     },
 
