@@ -72,6 +72,7 @@
             v-for="(bar, idx) in normalizedGraph"
             :key="idx"
             :style="{ height: `${bar}%` }"
+            ref="graphElements"
             class="bg-purple-800 border w-10"
           ></div>
         </div>
@@ -128,6 +129,7 @@ export default {
       priceThreshold: 1,
       decimalPlaces: 2,
       significantDigits: 2,
+      baseWidthUnit: 4,
 
       minPercentageGraphLine: 5,
       maxPercentageGraphLine: 100,
@@ -206,12 +208,16 @@ export default {
         return this.graph.map(() => this.maxPercentageGraphLine / 2);
       }
 
-      return this.graph.map(
+      const result = this.graph.map(
         (price) =>
           this.minPercentageGraphLine +
           ((price - minValue) * this.maxPercentageGraphLine - this.minPercentageGraphLine) /
             (maxValue - minValue)
       );
+
+      console.log(result);
+
+      return result;
     },
 
     pageStateOptions() {
@@ -232,11 +238,39 @@ export default {
     },
 
     calculateMaxGraphElements() {
-      if (!this.$refs.graph) {
+      if (!this.$refs.graph || !this.$refs.graphElements || this.$refs.graphElements.length === 0) {
         return;
       }
 
-      this.maxGraphElements = this.$refs.graph.clientWidth / 38;
+      this.trimGraphToMaxSize();
+
+      const firstGraphElement = this.$refs.graphElements[0];
+      const widthValue = this.extractNumberFromClass(firstGraphElement.classList, 'w-', '-');
+      this.maxGraphElements = this.$refs.graph.clientWidth / (widthValue * this.baseWidthUnit);
+    },
+
+    trimGraphToMaxSize() {
+      if (this.graph.length > this.maxGraphElements) {
+        this.graph = this.graph.slice(this.graph.length - this.maxGraphElements);
+      }
+    },
+
+    extractNumberFromClass(classList, classPrefix, delimiter) {
+      if (!classList?.length) {
+        return null;
+      }
+
+      for (const className of classList) {
+        if (className.startsWith(classPrefix)) {
+          const parts = className.split(delimiter);
+          if (parts.length > 1) {
+            return parts[1];
+          }
+          return null;
+        }
+      }
+
+      return null;
     },
 
     updateTicker(tickerName, price) {
@@ -245,9 +279,7 @@ export default {
         .forEach((ticker) => {
           if (ticker === this.selectedTicker) {
             this.graph.push(price);
-            while (this.graph.length > this.maxGraphElements) {
-              this.graph.shift();
-            }
+            this.trimGraphToMaxSize();
           }
           ticker.price = price;
         });
@@ -293,7 +325,7 @@ export default {
 
   watch: {
     selectedTicker() {
-      this.graph = [];
+      this.graph = [this.maxGraphElements];
       this.$nextTick().then(this.calculateMaxGraphElements);
     },
 
