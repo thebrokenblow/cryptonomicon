@@ -208,16 +208,12 @@ export default {
         return this.graph.map(() => this.maxPercentageGraphLine / 2);
       }
 
-      const result = this.graph.map(
+      return this.graph.map(
         (price) =>
           this.minPercentageGraphLine +
           ((price - minValue) * this.maxPercentageGraphLine - this.minPercentageGraphLine) /
             (maxValue - minValue)
       );
-
-      console.log(result);
-
-      return result;
     },
 
     pageStateOptions() {
